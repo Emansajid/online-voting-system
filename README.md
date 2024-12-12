@@ -2,65 +2,54 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
-#include<windows.h>
-#include<cstdlib>
+#include <windows.h>
+#include <cstdlib>
 
 using namespace std;
 
-struct voter
-{
+struct voter {
     string firstName;
     string lastName;
     int cnic;
     string address;
 };
 
-class node
-{
+class node {
 public:
     voter data;
     node* next;
 
-    node(voter value)
-    {
+    node(voter value) {
         data = value;
         next = NULL;
     }
 };
 
-class voterlist
-{
+class voterlist {
 public:
     node* head;
 
-    voterlist()
-    {
+    voterlist() {
         head = NULL;
     }
 
-    void insertnode(voter data)
-    {
+    void insertnode(voter data) {
         node* new_node = new node(data);
-        if (head == NULL)
-        {
+        if (head == NULL) {
             head = new_node;
         }
-        else
-        {
+        else {
             node* temp = head;
-            while (temp->next != NULL)
-            {
+            while (temp->next != NULL) {
                 temp = temp->next;
             }
             temp->next = new_node;
         }
     }
 
-    void display()
-    {
+    void display() {
         node* temp = head;
-        while (temp != NULL)
-        {
+        while (temp != NULL) {
             cout << "Name: " << temp->data.firstName << " " << temp->data.lastName;
             cout << "\tCNIC number: " << temp->data.cnic;
             cout << "\tAddress: " << temp->data.address;
@@ -69,18 +58,15 @@ public:
         }
     }
 
-    void saveToFile(const string& filename)
-    {
-        ofstream file("Voters.txt", ios::out | ios::app);
-        if (!file.is_open())
-        {
+    void saveToFile(const string& filename) {
+        ofstream file(filename, ios::out);
+        if (!file.is_open()) {
             cout << "Error opening file for writing." << endl;
             return;
         }
 
         node* temp = head;
-        while (temp != NULL)
-        {
+        while (temp != NULL) {
             file << temp->data.firstName << "," << temp->data.lastName << ","
                 << temp->data.cnic << "," << temp->data.address << endl;
             temp = temp->next;
@@ -90,18 +76,26 @@ public:
         cout << "Voter data has been saved to file." << endl;
     }
 
-    void loadFromFile(const string& filename)
-    {
-        ifstream file("Voters.txt");
-        if (!file.is_open())
-        {
+    void loadFromFile(const string& filename) {
+        ifstream file(filename);
+        if (!file.is_open()) {
             cout << "Error opening file for reading." << endl;
             return;
         }
 
-        voter data;
-        while (file >> data.firstName >> data.lastName >> data.cnic >> ws && getline(file, data.address))
-        {
+        string line, firstName, lastName, address;
+        int cnic;
+        while (getline(file, line)) {
+            size_t pos1 = line.find(",");
+            size_t pos2 = line.find(",", pos1 + 1);
+            size_t pos3 = line.find(",", pos2 + 1);
+
+            firstName = line.substr(0, pos1);
+            lastName = line.substr(pos1 + 1, pos2 - pos1 - 1);
+            cnic = stoi(line.substr(pos2 + 1, pos3 - pos2 - 1));
+            address = line.substr(pos3 + 1);
+
+            voter data{ firstName, lastName, cnic, address };
             insertnode(data);
         }
 
@@ -110,36 +104,79 @@ public:
     }
 };
 
+class VoterQueue {
+public:
+    struct Node {
+        voter data;
+        Node* next;
 
-void getvoterdata(voterlist& list)
-{
+        Node(voter v) : data(v), next(nullptr) {}
+    };
+
+    Node* front;
+    Node* rear;
+
+    VoterQueue() {
+        front = NULL;
+        rear = NULL;
+    }
+    void enqueue(voter v) {
+        Node* newNode = new Node(v);
+        if (rear == nullptr) {
+            front = rear = newNode;
+        }
+        else {
+            rear->next = newNode;
+            rear = newNode;
+        }
+    }
+
+    voter dequeue() {
+        if (front == nullptr) {
+            cout<<"Queue is empty!";
+        }
+
+        Node* temp = front;
+        voter v = temp->data;
+        front = front->next;
+        if (front == nullptr) {
+            rear = nullptr;
+        }
+        delete temp;
+        return v;
+    }
+
+    bool isEmpty() {
+        return front == nullptr;
+    }
+};
+int pti = 0, pml = 0, jui = 0, ppp = 0;
+
+void getvoterdata(voterlist& list, VoterQueue& queue) {
     string firstName, lastName;
     int cnic;
     int age;
     string fullAddress;
 
-    cin.ignore();
+    cin.ignore();  
     cout << "\nEnter your full name: ";
     cin >> firstName >> lastName;
     cout << "\nEnter your age for checking if you are eligible to vote or not: ";
     cin >> age;
-    if (age < 18)
-    {
+    if (age < 18) {
         cout << "\nSorry! You are not eligible to cast a vote." << endl;
         return;
     }
     cout << "\nEnter your CNIC number for vote: ";
     cin >> cnic;
-    cin.ignore();
+    cin.ignore();  
     cout << "\nEnter your full address to register the vote: ";
     getline(cin, fullAddress);
 
     node* temp = list.head;
-    while (temp != NULL)
-    {
+    while (temp != NULL) {
         if (temp->data.firstName == firstName && temp->data.lastName == lastName &&
-            temp->data.cnic == cnic && temp->data.address == fullAddress)
-        {
+            temp->data.cnic == cnic && temp->data.address == fullAddress) {
             cout << "Sorry! You are unable to cast the vote because you have already cast a vote. Multiple votes are not allowed.\n";
             return;
         }
@@ -151,53 +188,19 @@ void getvoterdata(voterlist& list)
 
     voter data{ firstName, lastName, cnic, fullAddress };
     list.insertnode(data);
+    queue.enqueue(data);  
+    string party;
+    cout << "Enter the party you are voting for (PTI, PML-N, JUI-F, PPP): ";
+    cin >> party;
+
+    if (party == "PTI") pti++;
+    else if (party == "PML-N") pml++;
+    else if (party == "JUI-F") jui++;
+    else if (party == "PPP") ppp++;
+    else cout << "Invalid party name." << endl;
 }
 
-void votingoption()
-{
-    cout << "\t\n********WELCOME TO ELECTION-VOTING SYSTEM********\n\n\n";
-    cout << "\t\t |1.Cast the vote          |" << endl;
-    cout << "\t\t |2.Find vote count        |" << endl;
-    cout << "\t\t |3.Find leading candidate |" << endl;
-    cout << "\t\t |4.Exit                   |" << endl;
-}
-
-int pti = 0, pml = 0, jui = 0, ppp = 0;
-
-void candidates()
-{
-    cout << "\n           The Candidates in the election are :         \n\n";
-    cout << "                         MP election                        \n\n";
-    cout << "*********************\n";
-    cout << "|           1.PTI             |          2.PML-N         |\n";
-    cout << "*********************\n";
-    cout << "|           3.JUI-F           |          4.PPP           |\n";
-    cout << "*********************\n\n";
-    cout << "Press 1 to vote PTI\tPress 2 to vote PML-N\n";
-    cout << "Press 3 to vote JUI-F\tPress 4 to vote PPP\n";
-}
-
-void calculateVote(int vote)
-{
-    switch (vote)
-    {
-    case 1:
-        pti += 1;
-        break;
-    case 2:
-        pml += 1;
-        break;
-    case 3:
-        jui += 1;
-        break;
-    case 4:
-        ppp += 1;
-        break;
-    }
-}
-
-void displayVoteCounts()
-{
+void displayVoteCounts() {
     cout << "\nVote Counts:\n";
     cout << "PTI: " << pti << "\n";
     cout << "PML-N: " << pml << "\n";
@@ -205,38 +208,30 @@ void displayVoteCounts()
     cout << "PPP: " << ppp << "\n";
 }
 
-void displayvoterdata(voterlist& list)
-{
+void displayvoterdata(voterlist& list) {
     cout << "Information of the voters are : ";
     list.display();
 }
 
-void findLeadingCandidate()
-{
-    if (pti > pml && pti > jui && pti > ppp)
-    {
+void findLeadingCandidate() {
+    if (pti > pml && pti > jui && pti > ppp) {
         cout << "PTI is the leading candidate with " << pti << " votes.\n";
     }
-    else if (pml > pti && pml > jui && pml > ppp)
-    {
+    else if (pml > pti && pml > jui && pml > ppp) {
         cout << "PML-N is the leading candidate with " << pml << " votes.\n";
     }
-    else if (jui > pti && jui > pml && jui > ppp)
-    {
+    else if (jui > pti && jui > pml && jui > ppp) {
         cout << "JUI-F is the leading candidate with " << jui << " votes.\n";
     }
-    else if (ppp > pti && ppp > pml && ppp > jui)
-    {
+    else if (ppp > pti && ppp > pml && ppp > jui) {
         cout << "PPP is the leading candidate with " << ppp << " votes.\n";
     }
-    else
-    {
+    else {
         cout << "There is a tie between candidates.\n";
     }
 }
 
-int main()
-{
+int main() {
     system("color 07");
     cout << setw(70) << "\n\n\n\n\n\n";
     cout << setw(70) << "       *             *             *  \n";
@@ -421,7 +416,7 @@ int main()
     cout << setw(70) << "   *  * * *  *   \n";
     cout << setw(70) << "  *           *  \n";
     cout << setw(70) << " *             * \n";
-    cout << setw(70) << "******\n";
+    cout << setw(70) << "*****************\n";
     cout << setw(70) << "*               *\n";
     cout << setw(70) << "*               *\n";
     cout << setw(70) << "*    Online     *\n";
@@ -431,7 +426,7 @@ int main()
     cout << setw(70) << "*               *\n";
     cout << setw(70) << "*               *\n";
     cout << setw(70) << "*               *\n";
-    cout << setw(70) << "*******\n";
+    cout << setw(70) << "*****************\n";
     system("color 07");
     Sleep(700);
     system("color 07");
@@ -443,86 +438,50 @@ int main()
     system("color 07");
     Sleep(700);
     system("cls");
+    
     voterlist list;
-    int choice = 0;
+    VoterQueue queue;
 
-mainmenu:
-    system("cls");
-    votingoption();
-    cout << "\n\tPlease enter your choice: ";
-    cin >> choice;
-    system("cls");
-    int n;
-    switch (choice)
-    {
-    case 1:
-        candidates();
-        int candidateoption;
-        cout << "Enter the number for the party you want to vote: ";
-        cin >> candidateoption;
-        system("cls");
-        calculateVote(candidateoption);
-        getvoterdata(list);
-        cout << "Press 1 to back to the main menu.\nPress 2 to exit\n";
-        cin >> n;
-        if (n == 1)
-        {
-            goto mainmenu;
-        }
-        else if (n == 2)
-        {
-            cout << "Exiting the program " << endl;
-        }
-        else
-        {
-            cout << "Invalid input " << endl;
-        }
-        break;
-    case 2:
-        cout << "The counting of the voters is : " << endl;
-        displayVoteCounts();
-        cout << "Press 1 to go back to the main menu\nPress 2 to exit " << endl;
-        cin >> n;
-        if (n == 1)
-        {
-            goto mainmenu;
-        }
-        else if (n == 2)
-        {
-            cout << "Exiting the program " << endl;
-        }
-        else
-        {
-            cout << "Invalid input " << endl;
-        }
-        break;
-    case 3:
-        cout << "Finding the leading candidate:\n";
-        findLeadingCandidate();
-        cout << "Press 1 to back to the main menu.\n Press 2 to exit\n";
-        cin >> n;
-        if (n == 1)
-        {
-            goto mainmenu;
-        }
-        else if (n == 2)
-        {
-            cout << "Exiting the program " << endl;
-        }
-        else
-        {
-            cout << "Invalid input " << endl;
-        }
-        break;
-    case 4:
-        cout << "Exiting the program.\n";
-        n = 2;
-        break;
-    default:
-        cout << "Invalid choice. Please enter a valid option.\n";
-        n = 1;
-    }
+    int choice;
+    do {
+        cout << "\nMenu:\n";
+        cout << "1. Register Vote\n";
+        cout << "2. Display Voter Data\n";
+        cout << "3. Save Voter Data to File\n";
+        cout << "4. Load Voter Data from File\n";
+        cout << "5. Display Vote Counts\n";
+        cout << "6. Find Leading Candidate\n";
+        cout << "7. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
 
+        switch (choice) {
+        
+        case 1:
+            getvoterdata(list, queue);
+            break;
+        case 2:
+            displayvoterdata(list);
+            break;
+        case 3:
+            list.saveToFile("voters.txt");
+            break;
+        case 4:
+            list.loadFromFile("voters.txt");
+            break;
+        case 5:
+            displayVoteCounts();
+            break;
+        case 7:
+            findLeadingCandidate();
+            break;
+        case 6:
+            cout << "Exiting the program.\n";
+            break;
+        default:
+            cout << "Invalid choice! Please try again.\n";
+        }
+    } while (choice != 7);
 
     return 0;
 }
